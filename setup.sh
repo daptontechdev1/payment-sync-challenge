@@ -1,74 +1,112 @@
 #!/bin/bash
 
-# Setup Script for Payment Sync Challenge
-# This script creates a fresh Laravel project and copies the challenge files
+# Payment Sync Challenge - Setup Script (Mac/Linux)
+# This script sets up a working Laravel project with the challenge files
 
 set -e
 
-echo "🚀 Setting up Payment Sync Challenge..."
+echo "🚀 Payment Sync Challenge - Setup"
+echo "=================================="
 
-# Check if composer is installed
-if ! command -v composer &> /dev/null; then
-    echo "❌ Composer is not installed. Please install it first."
-    exit 1
-fi
+# Check prerequisites
+command -v composer >/dev/null 2>&1 || { echo "❌ Composer is required. Install from https://getcomposer.org"; exit 1; }
+command -v php >/dev/null 2>&1 || { echo "❌ PHP is required."; exit 1; }
 
-# Check if we're in the right directory
-if [ ! -f "README.md" ]; then
+# Check we're in the right directory
+if [ ! -f "app/Http/Controllers/PaymentWebhookController.php" ]; then
     echo "❌ Please run this script from the payment-sync-challenge directory"
     exit 1
 fi
 
-# Create a temporary directory for Laravel installation
-TEMP_DIR=$(mktemp -d)
-echo "📦 Creating fresh Laravel project in temp directory..."
+CHALLENGE_DIR=$(pwd)
 
-# Install Laravel in temp directory
-composer create-project laravel/laravel "$TEMP_DIR/laravel" --quiet
+echo "📁 Current directory: $CHALLENGE_DIR"
 
-# Copy Laravel core files
-echo "📁 Copying Laravel core files..."
-cp -r "$TEMP_DIR/laravel/bootstrap" ./
-cp -r "$TEMP_DIR/laravel/config" ./
-cp -r "$TEMP_DIR/laravel/public" ./
-cp -r "$TEMP_DIR/laravel/storage" ./
-cp "$TEMP_DIR/laravel/artisan" ./
+# Step 1: Create fresh Laravel project alongside current folder
+echo ""
+echo "📦 Step 1/5: Creating fresh Laravel project..."
+cd ..
+rm -rf _laravel_temp_
+composer create-project laravel/laravel _laravel_temp_ --quiet --no-interaction
 
-# Copy app structure but keep our files
-cp -r "$TEMP_DIR/laravel/app/Console" ./app/
-cp -r "$TEMP_DIR/laravel/app/Exceptions" ./app/ 2>/dev/null || true
-cp -r "$TEMP_DIR/laravel/app/Providers" ./app/
+# Step 2: Copy Laravel framework files to challenge directory
+echo "📦 Step 2/5: Copying Laravel framework..."
 
-# Clean up temp directory
-rm -rf "$TEMP_DIR"
+# Core directories
+cp -r _laravel_temp_/bootstrap "$CHALLENGE_DIR/"
+cp -r _laravel_temp_/config "$CHALLENGE_DIR/"
+cp -r _laravel_temp_/public "$CHALLENGE_DIR/"
+cp -r _laravel_temp_/storage "$CHALLENGE_DIR/"
+cp -r _laravel_temp_/vendor "$CHALLENGE_DIR/"
 
-# Create .env from example
-cp .env.example .env
+# App subdirectories (keep our Controllers/Models/Mail, add the rest)
+cp -r _laravel_temp_/app/Console "$CHALLENGE_DIR/app/"
+cp -r _laravel_temp_/app/Providers "$CHALLENGE_DIR/app/"
+[ -d "_laravel_temp_/app/Exceptions" ] && cp -r _laravel_temp_/app/Exceptions "$CHALLENGE_DIR/app/"
 
-# Update .env with SQLite configuration
-sed -i 's|DB_DATABASE=.*|DB_DATABASE='"$(pwd)"'/database/database.sqlite|g' .env
+# We need web.php for Laravel to boot
+cp _laravel_temp_/routes/web.php "$CHALLENGE_DIR/routes/"
 
-# Create SQLite database file
-touch database/database.sqlite
+# Root files
+cp _laravel_temp_/artisan "$CHALLENGE_DIR/"
+cp _laravel_temp_/composer.json "$CHALLENGE_DIR/composer.json.laravel"
+cp _laravel_temp_/composer.lock "$CHALLENGE_DIR/"
 
-# Install dependencies
-echo "📦 Installing dependencies..."
-composer install --quiet
+# Cleanup temp Laravel
+rm -rf _laravel_temp_
 
-# Generate application key
+# Step 3: Setup environment
+echo "📦 Step 3/5: Configuring environment..."
+cd "$CHALLENGE_DIR"
+
+# Create .env from Laravel's default and configure SQLite
+cat > .env << 'EOF'
+APP_NAME="Payment Sync Challenge"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+LOG_CHANNEL=stack
+LOG_LEVEL=debug
+
+DB_CONNECTION=sqlite
+
+BROADCAST_DRIVER=log
+CACHE_DRIVER=file
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+
+MAIL_MAILER=log
+MAIL_FROM_ADDRESS="noreply@example.com"
+MAIL_FROM_NAME="${APP_NAME}"
+EOF
+
+# Generate app key
 php artisan key:generate --quiet
 
-# Run migrations and seed
-echo "🗃️ Running migrations and seeding database..."
+# Step 4: Setup database
+echo "📦 Step 4/5: Setting up database..."
+touch database/database.sqlite
 php artisan migrate:fresh --seed
 
-echo ""
-echo "✅ Setup complete!"
-echo ""
-echo "Start the server with:"
-echo "  php artisan serve"
-echo ""
-echo "Test webhook with:"
-echo "  curl -X POST http://localhost:8000/api/webhooks/payments \\"
-echo "    -H 'Content-Type: application/json' \\"
-echo "    -d '{\"event\":\"payment.success\",\"order_ref\":\"ORD-1001\",\"transaction_id\":\"txn_test123\",\"amount\":25000}'"
+# Step 5: Verify setup
+echo "📦 Step 5/5: Verifying setup..."
+if php artisan route:list 2>/dev/null | grep -q "webhooks/payments"; then
+    echo ""
+    echo "✅ Setup complete!"
+    echo ""
+    echo "▶ Start the server:"
+    echo "  php artisan serve"
+    echo ""
+    echo "▶ Test the webhook:"
+    echo "  curl -X POST http://localhost:8000/api/webhooks/payments \\"
+    echo "    -H 'Content-Type: application/json' \\"
+    echo "    -d '{\"event\":\"payment.success\",\"order_ref\":\"ORD-1001\",\"transaction_id\":\"txn_test\",\"amount\":25000}'"
+    echo ""
+    echo "▶ Check order status:"
+    echo "  curl http://localhost:8000/api/orders/ORD-1001"
+else
+    echo "⚠️  Setup completed but route verification failed. Try running 'php artisan serve' anyway."
+fi
