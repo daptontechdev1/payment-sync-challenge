@@ -24,7 +24,7 @@ Your job: **Debug, fix, and extend this system.**
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/daptontechdev1/payment-sync-challenge.git
 cd payment-sync-challenge
 
 # Run the setup script
@@ -137,98 +137,5 @@ POST /api/webhooks/payments
 | ORD-1005 | 120000 | processing | 5 items |
 
 ---
-
-## Your Tasks
-
-### Part 1: Bug Identification (10 mins)
-Review `app/Http/Controllers/PaymentWebhookController.php`
-
-- What bugs and issues do you see?
-- Walk through what happens when a webhook is received
-- Identify potential failure scenarios
-
-### Part 2: Design Discussion (15 mins)
-- How would you restructure this system?
-- What patterns would you apply?
-- How would you handle failures and retries?
-
-### Part 3: Implement Critical Fix (20 mins)
-- Pick the **most critical issue** and implement a proper fix
-- Explain why you prioritized this issue
-- Consider backward compatibility
-
-### Part 4: Curveball 🎯
-> "Product team just told us: customers can now pay in **installments**. A single order can have multiple `payment.success` webhooks (30% now, 70% later). How does this affect your solution?"
-
----
-
-## Testing Webhooks
-
-```bash
-# Test payment success
-curl -X POST http://localhost:8000/api/webhooks/payments \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event": "payment.success",
-    "order_ref": "ORD-1001",
-    "transaction_id": "txn_test_001",
-    "amount": 25000,
-    "currency": "USD",
-    "timestamp": "2024-01-15T10:30:00Z"
-  }'
-
-# Test duplicate webhook (send same request again)
-# What happens?
-
-# Test refund
-curl -X POST http://localhost:8000/api/webhooks/payments \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event": "refund.processed",
-    "order_ref": "ORD-1003",
-    "transaction_id": "ref_test_001",
-    "refund_amount": 10000,
-    "original_transaction_id": "txn_original",
-    "timestamp": "2024-01-15T10:30:00Z"
-  }'
-
-# Test with non-existent order
-curl -X POST http://localhost:8000/api/webhooks/payments \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event": "payment.success",
-    "order_ref": "ORD-INVALID",
-    "transaction_id": "txn_test_002",
-    "amount": 5000,
-    "currency": "USD",
-    "timestamp": "2024-01-15T10:30:00Z"
-  }'
-```
-
----
-
-## Evaluation Criteria
-
-| Area | What We're Looking For |
-|------|------------------------|
-| **Bug Detection** | Can you identify subtle issues, not just obvious ones? |
-| **Prioritization** | Do you fix the right things first? |
-| **System Design** | Do you think about queues, transactions, idempotency? |
-| **Code Quality** | Clean, readable, maintainable solutions |
-| **Communication** | Can you explain your thought process clearly? |
-| **Adaptability** | How do you handle changing requirements? |
-
----
-
-## Files to Review
-
-```
-app/Http/Controllers/PaymentWebhookController.php  <- Main buggy code
-app/Models/Order.php
-app/Models/Payment.php
-app/Models/Product.php
-app/Models/Customer.php
-app/Models/Merchant.php
-```
 
 Good luck! 🚀
