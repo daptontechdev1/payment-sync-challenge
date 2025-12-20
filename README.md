@@ -27,9 +27,8 @@ Your job: **Debug, fix, and extend this system.**
 git clone https://github.com/daptontechdev1/payment-sync-challenge.git
 cd payment-sync-challenge
 
-# Run the setup script
-chmod +x setup.sh
-./setup.sh
+composer install
+php artisan key:generate
 
 # Start the server
 php artisan serve
