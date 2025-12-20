@@ -5,6 +5,7 @@
 
 set -e
 
+echo ""
 echo "🚀 Payment Sync Challenge - Setup"
 echo "=================================="
 
@@ -32,16 +33,16 @@ composer create-project laravel/laravel _laravel_temp_ --quiet --no-interaction
 # Step 2: Copy Laravel framework files to challenge directory
 echo "📦 Step 2/5: Copying Laravel framework..."
 
-# Core directories
+# Core directories (these always exist)
 cp -r _laravel_temp_/bootstrap "$CHALLENGE_DIR/"
 cp -r _laravel_temp_/config "$CHALLENGE_DIR/"
 cp -r _laravel_temp_/public "$CHALLENGE_DIR/"
 cp -r _laravel_temp_/storage "$CHALLENGE_DIR/"
 cp -r _laravel_temp_/vendor "$CHALLENGE_DIR/"
 
-# App subdirectories (keep our Controllers/Models/Mail, add the rest)
-cp -r _laravel_temp_/app/Console "$CHALLENGE_DIR/app/"
-cp -r _laravel_temp_/app/Providers "$CHALLENGE_DIR/app/"
+# App subdirectories - only copy if they exist (Laravel 11 doesn't have Console/Exceptions by default)
+[ -d "_laravel_temp_/app/Console" ] && cp -r _laravel_temp_/app/Console "$CHALLENGE_DIR/app/"
+[ -d "_laravel_temp_/app/Providers" ] && cp -r _laravel_temp_/app/Providers "$CHALLENGE_DIR/app/"
 [ -d "_laravel_temp_/app/Exceptions" ] && cp -r _laravel_temp_/app/Exceptions "$CHALLENGE_DIR/app/"
 
 # We need web.php for Laravel to boot
@@ -49,7 +50,6 @@ cp _laravel_temp_/routes/web.php "$CHALLENGE_DIR/routes/"
 
 # Root files
 cp _laravel_temp_/artisan "$CHALLENGE_DIR/"
-cp _laravel_temp_/composer.json "$CHALLENGE_DIR/composer.json.laravel"
 cp _laravel_temp_/composer.lock "$CHALLENGE_DIR/"
 
 # Cleanup temp Laravel
@@ -59,10 +59,11 @@ rm -rf _laravel_temp_
 echo "📦 Step 3/5: Configuring environment..."
 cd "$CHALLENGE_DIR"
 
-# Create .env from Laravel's default and configure SQLite
+# Create .env with SQLite configured
 cat > .env << 'EOF'
 APP_NAME="Payment Sync Challenge"
 APP_ENV=local
+APP_KEY=
 APP_DEBUG=true
 APP_URL=http://localhost:8000
 
@@ -93,20 +94,17 @@ php artisan migrate:fresh --seed
 
 # Step 5: Verify setup
 echo "📦 Step 5/5: Verifying setup..."
-if php artisan route:list 2>/dev/null | grep -q "webhooks/payments"; then
-    echo ""
-    echo "✅ Setup complete!"
-    echo ""
-    echo "▶ Start the server:"
-    echo "  php artisan serve"
-    echo ""
-    echo "▶ Test the webhook:"
-    echo "  curl -X POST http://localhost:8000/api/webhooks/payments \\"
-    echo "    -H 'Content-Type: application/json' \\"
-    echo "    -d '{\"event\":\"payment.success\",\"order_ref\":\"ORD-1001\",\"transaction_id\":\"txn_test\",\"amount\":25000}'"
-    echo ""
-    echo "▶ Check order status:"
-    echo "  curl http://localhost:8000/api/orders/ORD-1001"
-else
-    echo "⚠️  Setup completed but route verification failed. Try running 'php artisan serve' anyway."
-fi
+echo ""
+echo "✅ Setup complete!"
+echo ""
+echo "▶ Start the server:"
+echo "  php artisan serve"
+echo ""
+echo "▶ Test the webhook:"
+echo "  curl -X POST http://localhost:8000/api/webhooks/payments \\"
+echo "    -H 'Content-Type: application/json' \\"
+echo "    -d '{\"event\":\"payment.success\",\"order_ref\":\"ORD-1001\",\"transaction_id\":\"txn_test\",\"amount\":25000}'"
+echo ""
+echo "▶ Check order status:"
+echo "  curl http://localhost:8000/api/orders/ORD-1001"
+echo ""
