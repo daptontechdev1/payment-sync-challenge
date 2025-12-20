@@ -4,7 +4,7 @@
     "description": "Technical assessment - Payment sync system debugging",
     "require": {
         "php": "^8.1",
-        "laravel/framework": "^10.0|^11.0",
+        "laravel/framework": "^11.0",
         "guzzlehttp/guzzle": "^7.2"
     },
     "require-dev": {
